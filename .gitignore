@@ -1,0 +1,7 @@
+__pycache__
+.venv
+dataset/*
+!dataset/.gitkeep
+
+saved_model/*
+!saved_model/.gitkeep
