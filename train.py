@@ -63,8 +63,8 @@ def arg_parse():
     parser.add_argument('-m', type=str, default=model_name, help='model name')
     parser.add_argument('-d', type=str, default=data_set_dir, help="data set dir", required=True)
     parser.add_argument('-o', type=str, default=model_save_dir, help="output train model dir")
-    parser.add_argument('-batch_size', type=int, default=8, help="batch size")
-    parser.add_argument('-epoch', type=int, default=10, help="max_epoch")
+    parser.add_argument('--batch_size', type=int, default=8, help="batch size")
+    parser.add_argument('--epoch', type=int, default=10, help="max_epoch")
     
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
