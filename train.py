@@ -84,8 +84,8 @@ def arg_parse():
     batch_size = args.batch_size
     epoch = args.epoch
     
-    # lr=1e-4
-    lr=5e-5
+    lr=1e-4
+    # lr=5e-5
     training_args = Seq2SeqTrainingArguments(
         evaluation_strategy="epoch",
         save_strategy="no",
