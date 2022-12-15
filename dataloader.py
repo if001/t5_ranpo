@@ -65,6 +65,7 @@ class T5NextSentencePrediction(Dataset):
         while True:
             idx = random.randint(0, len(self.target_files)-1)
             file_path = self.target_files.pop(idx)
+            print('use files...', file_path)
             with open(file_path, "r", encoding="utf-8") as f:
                 li =  f.readlines();
                 title = li[0].rstrip()
