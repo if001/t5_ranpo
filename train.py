@@ -1,6 +1,7 @@
 import glob
 import os
 import argparse
+import pathlib
 
 import torch
 from transformers import DataCollatorForSeq2Seq
@@ -107,7 +108,7 @@ def main():
     tokenizer = T5Tokenizer.from_pretrained("sonoisa/t5-base-japanese")
     model = T5ForConditionalGeneration.from_pretrained(model_name)
 
-    target_files = "{}*txt".format(data_set_dir)    
+    target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(target_files)
     print('files', len(files))
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length)
