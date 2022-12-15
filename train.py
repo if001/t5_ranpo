@@ -31,6 +31,8 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length):
     train_size = int(len(ds) * 0.8)
     val_size = len(ds) - train_size
     train_data, val_data = torch.utils.data.random_split(dataset=ds, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42))
+    print("train_data:", len(train_data))
+    print("val_data:", len(val_data))
     return train_data, val_data
 
 def train(tokenizer, model, training_args, train_data, val_data, resume=False):
