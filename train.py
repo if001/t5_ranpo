@@ -93,6 +93,7 @@ def arg_parse():
         learning_rate=lr
         )
 
+    print("data set dir:", data_set_dir)
     print("load model:", model_name)
     print("save model dir:", model_save_dir)
     print("max_seq_len:", args.max_seq_len)
@@ -108,6 +109,7 @@ def main():
 
     target_files = "{}*txt".format(data_set_dir)    
     files = glob.glob(target_files)
+    print('files', len(files))
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length)
 
     train(tokenizer, model, training_args, train_data, val_data)
