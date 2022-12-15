@@ -109,8 +109,8 @@ def main():
     model = T5ForConditionalGeneration.from_pretrained(model_name)
 
     target_files = pathlib.Path(data_set_dir) / "*.txt"
-    files = glob.glob(target_files)
-    print('files', len(files))
+    files = glob.glob(str(target_files))
+
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length)
 
     train(tokenizer, model, training_args, train_data, val_data)
