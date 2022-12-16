@@ -1,3 +1,7 @@
+"""
+nvidia-smi
+"""
+
 import glob
 import os
 import argparse
@@ -8,7 +12,9 @@ from transformers import DataCollatorForSeq2Seq
 from transformers import Seq2SeqTrainingArguments
 from transformers import TrainingArguments, Trainer
 from transformers import T5Tokenizer, T5ForConditionalGeneration
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import ReformerTokenizer, GPT2TokenizerFast
+# from modeling_gpt_neox import GPTNeoXForCausalLM
 
 import sentencepiece
 from distutils.dir_util import copy_tree
@@ -20,7 +26,14 @@ from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction
 
 # max_seq_length = 256
 # max_dataset_length = 200
-    
+
+def __device():
+    if torch.cuda.is_available():
+        print("use gpu...")
+        return "cuda:0"
+    else:
+        return "cpu"
+
 def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type):
     if model_type == 't5':
         ds = T5NextSentencePrediction(
@@ -38,20 +51,20 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             max_seq_length,
             max_dataset_length      
             )
+
     train_size = int(len(ds) * 0.8)
     val_size = len(ds) - train_size
     train_data, val_data = torch.utils.data.random_split(dataset=ds, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42))
+    
     print("data_set:", len(ds))
     print("train_data:", len(train_data))
     print("val_data:", len(val_data))
     return train_data, val_data
 
 def train(tokenizer, model, training_args, train_data, val_data, resume=False):
-    USE_GPU = torch.cuda.is_available()
-    if USE_GPU:
-        print('use gpu...')
-        model.cuda()
-
+    model.to(__device())
+    print('model is cuda', model.device)
+    
     data_collator = DataCollatorForSeq2Seq(tokenizer=tokenizer)  
     trainer = Trainer(
         model=model,
@@ -128,10 +141,24 @@ def load_model(model_type, model_name):
     elif model_type == 'gpt':
         # default_model = 'yellowback/gpt-neo-japanese-1.3B'
         # model_name = model_name if model_name else default_model
-        # tokenizer = AutoTokenizer.from_pretrained(defaul_model)
+        # tokenizer = GPT2TokenizerFast.from_pretrained(default_model)
+        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
         # model = AutoModelForCausalLM.from_pretrained(model_name)
 
-        default_model = "rinna/japanese-gpt2-medium"
+        # default_model = 'nlp-waseda/gpt2-small-japanese'
+        # model_name = model_name if model_name else default_model
+        # tokenizer = ReformerTokenizer.from_pretrained('nlp-waseda/gpt2-small-japanese-wikipedia')
+        # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+        # special_tokens_dict = {'pad_token': '[PAD]'}        
+        # tokenizer.add_special_tokens(special_tokens_dict)
+        # model = AutoModelForCausalLM.from_pretrained(model_name)
+        
+        # default_model = "rinna/japanese-gpt-neox-small"
+        # tokenizer = T5Tokenizer.from_pretrained(default_model)
+        # model_name = model_name if model_name else default_model        
+        # model = GPTNeoXForCausalLM.from_pretrained(model_name)
+
+        default_model = "rinna/japanese-gpt2-small"
         model_name = model_name if model_name else default_model        
         tokenizer = T5Tokenizer.from_pretrained(default_model)
         tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
