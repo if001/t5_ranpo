@@ -196,9 +196,6 @@ class GPTNextSentencePrediction(Dataset):
 
                     if source_full and target_full:
                         source = __prefix.format(title, self.__split(idx, total), source)
-                        print('source:', source)
-                        print('target:', target)
-                        print('-----------')
                         tokenized_inputs = self.__tokenize(source, self.input_max_len)
                         tokenized_targets = self.__tokenize(target, self.target_max_len)
                         self.inputs.append(tokenized_inputs)
