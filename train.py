@@ -7,12 +7,13 @@ import torch
 from transformers import DataCollatorForSeq2Seq
 from transformers import Seq2SeqTrainingArguments
 from transformers import TrainingArguments, Trainer
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import AutoModelForCausalLM
 
 import sentencepiece
-from transformers import T5Tokenizer, T5ForConditionalGeneration
 from distutils.dir_util import copy_tree
 
-from dataloader import T5NextSentencePrediction
+from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction
 
 # max_seq_length = 256
 # max_dataset_length = 80000
@@ -20,14 +21,23 @@ from dataloader import T5NextSentencePrediction
 # max_seq_length = 256
 # max_dataset_length = 200
     
-def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length):
-    ds = T5NextSentencePrediction(
-        tokenizer,
-        files,
-        max_seq_length,
-        max_seq_length,
-        max_dataset_length      
-        )
+def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type):
+    if model_type == 't5':
+        ds = T5NextSentencePrediction(
+            tokenizer,
+            files,
+            max_seq_length,
+            max_seq_length,
+            max_dataset_length      
+            )
+    if model_type == 'gpt':
+        ds = GPTNextSentencePrediction(
+            tokenizer,
+            files,
+            max_seq_length,
+            max_seq_length,
+            max_dataset_length      
+            )
     train_size = int(len(ds) * 0.8)
     val_size = len(ds) - train_size
     train_data, val_data = torch.utils.data.random_split(dataset=ds, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42))
@@ -58,13 +68,12 @@ def train(tokenizer, model, training_args, train_data, val_data, resume=False):
     trainer.save_model()
 
 def arg_parse():
-    model_name = "sonoisa/t5-base-japanese"
     data_set_dir = "/content/data_set/ranpo/data_set/"
     model_save_dir = "/content/saved_model/t5_ranpo/"
     storage_dir = '/content/drive/MyDrive/t5_ranpo/'
             
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', type=str, default=model_name, help='model name')
+    parser.add_argument('-m', type=str, help='model name')
     parser.add_argument('-d', type=str, default=data_set_dir, help="data set dir", required=True)
     parser.add_argument('-o', type=str, default=model_save_dir, help="output train model dir")
     parser.add_argument('--batch_size', type=int, default=8, help="batch size")
@@ -73,11 +82,15 @@ def arg_parse():
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
     
+    parser.add_argument('--type', type=str, required=True, help="model type. ex. t5 gpt")
+    
     args = parser.parse_args()
     
     model_name = args.m
     model_save_dir = args.o
-    assert os.path.exists(model_save_dir), '{} not found'.format(model_save_dir)
+    if(os.path.exists(model_save_dir) is False):
+        print("{} not found. create...".format(model_save_dir))
+        os.makedirs(model_save_dir)
         
     data_set_dir = args.d
     assert os.path.exists(data_set_dir), '{} not found'.format(data_set_dir)
@@ -98,24 +111,47 @@ def arg_parse():
         )
 
     print("data set dir:", data_set_dir)
-    print("load model:", model_name)
     print("save model dir:", model_save_dir)
     print("max_seq_len:", args.max_seq_len)
     print("max_data_len:", args.max_data_len)
-    
-    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len
+
+    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len, args.type
+
+def load_model(model_type, model_name):
+    if model_type == "t5":
+        default_model = "sonoisa/t5-base-japanese"
+        tokenizer = T5Tokenizer.from_pretrained(default_model)
+        
+        model_name =   model_name if model_name else default_model
+        model = T5ForConditionalGeneration.from_pretrained(model_name)
+        
+    elif model_type == 'gpt':
+        # default_model = 'yellowback/gpt-neo-japanese-1.3B'
+        # model_name = model_name if model_name else default_model
+        # tokenizer = AutoTokenizer.from_pretrained(defaul_model)
+        # model = AutoModelForCausalLM.from_pretrained(model_name)
+
+        default_model = "rinna/japanese-gpt2-medium"
+        model_name = model_name if model_name else default_model        
+        tokenizer = T5Tokenizer.from_pretrained(default_model)
+        tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
+        model = AutoModelForCausalLM.from_pretrained(model_name)
+    else:
+        assert False, 'type {} is invalid. gpt or t5'.format(model_type)
+
+    print("model type:", model_type)
+    print("load model:", model_name)    
+
+    return tokenizer, model
     
 def main():
-    model_name, data_set_dir, training_args, max_seq_length, max_dataset_length = arg_parse()
+    model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type = arg_parse()
+    tokenizer, model = load_model(model_type, model_name)
     
-    tokenizer = T5Tokenizer.from_pretrained("sonoisa/t5-base-japanese")
-    model = T5ForConditionalGeneration.from_pretrained(model_name)
-
     target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(str(target_files))
 
-    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length)
-
+    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
     train(tokenizer, model, training_args, train_data, val_data)
 
 if __name__ == "__main__":
