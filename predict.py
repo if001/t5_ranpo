@@ -50,7 +50,7 @@ class Generator():
         output = self.decode(output_vec)
         print('output:', output)
         
-     def __split(self, current, total):
+    def __split(self, current, total):
         unit = int(total / 3)
         if current < unit:
             return "前半"
