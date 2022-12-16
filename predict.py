@@ -1,12 +1,17 @@
 import argparse
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-
+from transformers import T5Tokenizer, T5ForConditionalGeneration, AutoModelForCausalLM
 
 
 class Generator():
     def __init__(self, model_name, title):
-        self.tokenizer = T5Tokenizer.from_pretrained("sonoisa/t5-base-japanese")
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
+        default_model = "rinna/japanese-gpt2-small"
+        model_name = model_name if model_name else default_model
+        self.tokenizer = T5Tokenizer.from_pretrained(default_model)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        
+        # self.tokenizer = T5Tokenizer.from_pretrained("sonoisa/t5-base-japanese")
+        # self.model = T5ForConditionalGeneration.from_pretrained(model_name)
+        
         self.prefix = 'タイトル「{}」の{}を予測 : {}'
         self.title = title
 
