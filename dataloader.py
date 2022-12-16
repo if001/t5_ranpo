@@ -148,7 +148,7 @@ class GPTNextSentencePrediction(Dataset):
     def __tokenize(self, source, max_len):
         return self.tokenizer(
             source, max_length=max_len, truncation=True, 
-            padding="max_length", return_tensors="pt"
+            padding="max_length", return_tensors="pt",
             )
 
     def __complement_end(self, s):
