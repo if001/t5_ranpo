@@ -20,12 +20,12 @@ class Generator():
                                       max_length=256,
                                       truncation=True,
                                       padding="longest",
-                                      return_tensors="pt"
+                                      return_tensors="pt",
                                       )
         
         outputs = self.model.generate(input_ids=batch['input_ids'],
                                       attention_mask=batch['attention_mask'],
-                                      max_length=128,
+                                      max_length=256,
                                       repetition_penalty=10.0,
                                       temperature=0.8,
                                       top_p=0.2,
