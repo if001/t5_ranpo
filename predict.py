@@ -7,7 +7,7 @@ class Generator():
     def __init__(self, model_name, title):
         self.tokenizer = T5Tokenizer.from_pretrained("sonoisa/t5-base-japanese")
         self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-        self.prefix = '{}の{}の{}: {}'
+        self.prefix = 'タイトル「{}」の{}を予測 : {}'
         self.title = title
 
     def prediction(self, input_seq):
@@ -44,12 +44,22 @@ class Generator():
         output_vec = self.prediction(input_seq)
         output = self.decode(output_vec)
         print('output:', output)
-            
+        
+     def __split(self, current, total):
+        unit = int(total / 3)
+        if current < unit:
+            return "前半"
+        elif unit <= current < unit*2:
+            return "中盤"
+        else:
+            return "後半"  
+        
     def do(self, input_seq, max_len=5):
         # print('input', input_seq)
         cnt = 0
-        while True:            
-            input_seq = self.prefix.format(self.title, cnt, max_len, input_seq)
+        while True:
+            part = self.__split(cnt, max_len)
+            input_seq = self.prefix.format(self.title, part, input_seq)
             print('input:', input_seq)
             output_vec = self.prediction(input_seq)
             output = self.decode(output_vec)
@@ -67,6 +77,7 @@ def main():
     parser.add_argument('-c', type=int, default=1, help="predict sentense loop count")
     parser.add_argument('-m', type=str, required=True, help='load model')
     parser.add_argument('-t', type=str, required=True, help='title')
+    parser.add_argument('-f', type=str, default='', help='first sentense')
     # parser.add_argument('-s', type=str)
     args = parser.parse_args()
 
@@ -84,7 +95,7 @@ def main():
     # input_seq = "屋敷は赤い炎に包まれていた。"
     # input_seq = "赤い部屋の1の10: 屋敷は赤い炎に包まれていた。"
     # first_seq ='屋敷は赤い炎に包まれていた。'
-    first_seq =''
+    first_seq = args.f
     gen.do(first_seq, gen_count)
 
 
