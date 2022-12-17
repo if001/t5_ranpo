@@ -24,15 +24,14 @@ class Generator():
                                       )
         
         outputs = self.model.generate(input_ids=batch['input_ids'],
-                                      attention_mask=batch['attention_mask'],
-                                      max_length=256,
-                                      repetition_penalty=10.0,
-                                      temperature=0.8,
-                                      top_p=0.2,
-                                      top_k=4,
+                                      max_length=200,
+                                      repetition_penalty=1.2,
+                                      temperature=0.9,
+                                      top_p=0.9,
+                                      top_k=0,
                                       no_repeat_ngram_size=1,
                                       num_beams=4,
-                                      num_return_sequences=4,
+                                      num_return_sequences=1,
                                  )
         return outputs
 
@@ -44,7 +43,8 @@ class Generator():
         return decoded[0]
 
     def sample(self, input_seq, cnt, max_len):
-        input_seq = self.prefix.format(self.title, cnt, max_len, input_seq)
+        part = self.__split(cnt, max_len)
+        input_seq = self.prefix.format(self.title, part, input_seq)        
         print('input:', input_seq)
         output_vec = self.prediction(input_seq)
         output = self.decode(output_vec)
@@ -93,21 +93,21 @@ def main():
     model_name = args.m
     gen_count = args.c
     title = args.t
+    first_seq = args.f
     
     gen = Generator(model_name, title)
     
     # input_seq = "そうです。あなたは夢でも見たのですか"
-    # input_seq = "屋敷は赤い炎に包まれていた。"
     # input_seq = "赤い部屋の1の10: 屋敷は赤い炎に包まれていた。"
     # first_seq ='屋敷は赤い炎に包まれていた。'
-    first_seq = args.f
-    gen.do(first_seq, gen_count)
+    first_seq = "屋敷は赤い炎に包まれていた。"
+    
+    #gen.do(first_seq, gen_count)
 
 
-    # first_seq = 'さて、その夜ふけのこと、明智探偵と怪盗二十面相とは、いったいどうなるのでしょう。'    
-    # gen.sample(first_seq, 4, 10)
-    # gen.sample(first_seq, 50, 00)
-    # gen.sample(first_seq, 99, 100)
+    gen.sample(first_seq, 1, 10)
+    gen.sample(first_seq, 5, 10)
+    gen.sample(first_seq, 10, 10)
 
     
         

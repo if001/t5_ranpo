@@ -157,8 +157,18 @@ class GPTNextSentencePrediction(Dataset):
         if s.count("。") == 0:
             return s + '。'
         return s
+    
+    def _build(self):
+        # self.__build_with_title_padding()
+        self.__build_only_body()      
+
+    def __build_only_body(self):
+        self.__build_sentense(with_title=False)
         
     def __build_with_title_padding(self):
+        self.__build_sentense(with_title=True)
+        
+    def __build_sentense(self, with_title = False):
         __prefix = "タイトル「{}」の{}を予測 : {}"
         __title_len = 20
         __source_max = self.input_max_len - len(__prefix) - 2 - __title_len
@@ -195,7 +205,8 @@ class GPTNextSentencePrediction(Dataset):
                                 target_full = True
 
                     if source_full and target_full:
-                        source = __prefix.format(title, self.__split(idx, total), source)
+                        if with_title:
+                            source = __prefix.format(title, self.__split(idx, total), source)
                         tokenized_inputs = self.__tokenize(source, self.input_max_len)
                         tokenized_targets = self.__tokenize(target, self.target_max_len)
                         self.inputs.append(tokenized_inputs)
@@ -212,7 +223,4 @@ class GPTNextSentencePrediction(Dataset):
                 if len(self.target_files) == 0:
                     break
 
-            
-    def _build(self):
-        self.__build_with_title_padding()
-      
+        

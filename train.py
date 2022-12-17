@@ -88,14 +88,15 @@ def arg_parse():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', type=str, help='model name')
     parser.add_argument('-d', type=str, default=data_set_dir, help="data set dir", required=True)
-    parser.add_argument('-o', type=str, default=model_save_dir, help="output train model dir")
-    parser.add_argument('--batch_size', type=int, default=8, help="batch size")
-    parser.add_argument('--epoch', type=int, default=10, help="max_epoch")
+    parser.add_argument('-o', type=str, help="output train model dir", required=True)
     
+    parser.add_argument('--type', type=str, required=True, help="model type. ex. t5 gpt")
+    parser.add_argument('--batch_size', type=int, default=8, help="batch size")
+    parser.add_argument('--epoch', type=int, default=10, help="max_epoch")    
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
     
-    parser.add_argument('--type', type=str, required=True, help="model type. ex. t5 gpt")
+
     
     args = parser.parse_args()
     
@@ -110,17 +111,16 @@ def arg_parse():
     batch_size = args.batch_size
     epoch = args.epoch
     
-    lr=1e-4
+    # lr=1e-4
     # lr=5e-5
     training_args = Seq2SeqTrainingArguments(
         evaluation_strategy="epoch",
-        save_strategy="no",
+        save_strategy="epoch",
         eval_steps=10,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epoch,
         output_dir=model_save_dir,
-        learning_rate=lr
         )
 
     print("data set dir:", data_set_dir)
