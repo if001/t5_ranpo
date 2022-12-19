@@ -6,6 +6,7 @@ import glob
 import os
 import argparse
 import pathlib
+import numpy as np
 
 import torch
 from transformers import DataCollatorForSeq2Seq
@@ -15,11 +16,12 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import ReformerTokenizer, GPT2TokenizerFast
 # from modeling_gpt_neox import GPTNeoXForCausalLM
+from itertools import chain
 
 import sentencepiece
 from distutils.dir_util import copy_tree
 
-from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction
+from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction, GPTNextSentencePredictionFullPadding
 
 # max_seq_length = 256
 # max_dataset_length = 80000
@@ -34,6 +36,33 @@ def __device():
     else:
         return "cpu"
 
+def np2tensor(x):
+    return torch.from_numpy(x).clone()
+    
+def tensor2np(x):
+    return x.to('cpu').detach().numpy().copy()
+
+## todo huggingfaceのサンプルによると,train dataはblock sizeごとに並び替えてたのでここで並び替え
+def apply_group(ds, block_size = 256):
+    concatenated = { k: [] for k in ds[0].keys() }
+    for v in ds:
+        for k in ds[0].keys():
+            concatenated[k].extend(tensor2np(v[k]))
+        
+    total_length = len(concatenated[list(concatenated.keys())[0]])
+    
+    if total_length >= block_size:
+        total_length = (total_length // block_size) * block_size
+    
+
+    results = []    
+    for i in range(0, total_length, block_size):
+        r = { k:  np2tensor(np.array(t[i: i + block_size])) for k,t in concatenated.items()}
+        r["labels"] = r["input_ids"].clone()
+        results.append(r)
+
+    return results
+
 def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type):
     if model_type == 't5':
         ds = T5NextSentencePrediction(
@@ -44,18 +73,25 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             max_dataset_length      
             )
     if model_type == 'gpt':
+        # ds = GPTNextSentencePredictionFullPadding(
+        #     tokenizer,
+        #     files,
+        #     max_seq_length,
+        #     max_dataset_length
+        #     )
         ds = GPTNextSentencePrediction(
             tokenizer,
             files,
             max_seq_length,
             max_seq_length,
-            max_dataset_length      
+            max_dataset_length
             )
 
+    # ds = apply_group(ds, max_seq_length)
     train_size = int(len(ds) * 0.95)
     val_size = len(ds) - train_size
     train_data, val_data = torch.utils.data.random_split(dataset=ds, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42))
-    
+
     print("data_set:", len(ds))
     print("train_data:", len(train_data))
     print("val_data:", len(val_data))
@@ -149,8 +185,6 @@ def load_model(model_type, model_name):
         # model_name = model_name if model_name else default_model
         # tokenizer = ReformerTokenizer.from_pretrained('nlp-waseda/gpt2-small-japanese-wikipedia')
         # tokenizer.add_special_tokens({'pad_token': '[PAD]'})
-        # special_tokens_dict = {'pad_token': '[PAD]'}        
-        # tokenizer.add_special_tokens(special_tokens_dict)
         # model = AutoModelForCausalLM.from_pretrained(model_name)
         
         # default_model = "rinna/japanese-gpt-neox-small"
@@ -158,9 +192,10 @@ def load_model(model_type, model_name):
         # model_name = model_name if model_name else default_model        
         # model = GPTNeoXForCausalLM.from_pretrained(model_name)
 
-        default_model = "rinna/japanese-gpt2-small"
+        # default_model = "rinna/japanese-gpt2-small"
+        default_model = "rinna/japanese-gpt2-medium"
         model_name = model_name if model_name else default_model        
-        tokenizer = T5Tokenizer.from_pretrained(default_model)
+        tokenizer = T5Tokenizer.from_pretrained(default_model)        
         tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
         model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
@@ -170,7 +205,7 @@ def load_model(model_type, model_name):
     print("load model:", model_name)    
 
     return tokenizer, model
-    
+
 def main():
     model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type = arg_parse()
     tokenizer, model = load_model(model_type, model_name)
@@ -178,7 +213,15 @@ def main():
     target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(str(target_files))
 
+
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
+
+
+    # print(train_data[0]['input_ids'])
+    # a = tokenizer.batch_decode(train_data[0]['input_ids'])
+    # b = tokenizer.batch_decode(train_data[0]['labels'])
+    # print(a)
+    # print(b)
     train(tokenizer, model, training_args, train_data, val_data)
 
 if __name__ == "__main__":
