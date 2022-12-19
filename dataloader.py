@@ -123,9 +123,9 @@ class GPTNextSentencePrediction(Dataset):
         # return {"source_ids": source_ids, "source_mask": source_mask, 
         #         "target_ids": target_ids, "target_mask": target_mask}
         # return {"input_ids": source_ids, "attention_mask": source_mask, "labels": target_ids}
-        # labels = np.copy(source_ids)
-        # return {"input_ids": source_ids, "attention_mask": source_mask, "labels": source_ids}        
-        return {"input_ids": source_ids, "attention_mask": source_mask}
+        labels = np.copy(source_ids)
+        return {"input_ids": source_ids, "attention_mask": source_mask, "labels": source_ids}        
+        # return {"input_ids": source_ids, "attention_mask": source_mask}
                 
 
 
