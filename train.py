@@ -105,7 +105,7 @@ def train(tokenizer, model, training_args, train_data, val_data, resume=False):
         eval_dataset=val_data,
         tokenizer=tokenizer,
         data_collator=data_collator,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
         )
     print("train...")
     trainer.train(resume)
