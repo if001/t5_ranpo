@@ -173,7 +173,9 @@ def arg_parse():
         learning_rate=lr,
         adafactor=True,
         lr_scheduler_type='constant',
-        weight_decay=0.001
+        weight_decay=0.001,
+        metric_for_best_model = 'eval_loss',
+        load_best_model_at_end = True
         )
 
     print("data set dir:", data_set_dir)
