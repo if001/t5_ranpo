@@ -234,14 +234,14 @@ def main():
 
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
 
-    for i in range(100):
-        a = tokenizer.batch_decode(train_data[i]['input_ids'])
-        print('source,', a)
-        # print('source,', len(a), ''.join(a))
-        b = tokenizer.batch_decode(train_data[i]['labels'])
-        # print('target,', len(b), ''.join(b))
-        print('=================')        
-    # train(tokenizer, model, training_args, train_data, val_data)
+    # for i in range(100):
+    #     a = tokenizer.batch_decode(train_data[i]['input_ids'])
+    #     print('source,', a)
+    #     # print('source,', len(a), ''.join(a))
+    #     b = tokenizer.batch_decode(train_data[i]['labels'])
+    #     # print('target,', len(b), ''.join(b))
+    #     print('=================')        
+    train(tokenizer, model, training_args, train_data, val_data)
 
 if __name__ == "__main__":
     main()
