@@ -15,6 +15,8 @@ from transformers import TrainingArguments, Trainer
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import ReformerTokenizer, GPT2TokenizerFast
+from transformers import EarlyStoppingCallback
+
 # from modeling_gpt_neox import GPTNeoXForCausalLM
 from itertools import chain
 
@@ -102,7 +104,8 @@ def train(tokenizer, model, training_args, train_data, val_data, resume=False):
         train_dataset=train_data,
         eval_dataset=val_data,
         tokenizer=tokenizer,
-        data_collator=data_collator
+        data_collator=data_collator,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)
         )
     print("train...")
     trainer.train(resume)
