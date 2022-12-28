@@ -13,7 +13,9 @@ class T5NextSentencePrediction(Dataset):
         self.targets = []
 
         self.max_data_size = max_data_size
+        self.tmp = []        
         self._build()
+
   
     def __len__(self):
         return len(self.inputs)
@@ -25,8 +27,6 @@ class T5NextSentencePrediction(Dataset):
         source_mask = self.inputs[index]["attention_mask"].squeeze()
         target_mask = self.targets[index]["attention_mask"].squeeze()
 
-        # return {"source_ids": source_ids, "source_mask": source_mask, 
-        #         "target_ids": target_ids, "target_mask": target_mask}
         return {"input_ids": source_ids, "attention_mask": source_mask, 
                 "labels": target_ids, "decoder_attention_mask": target_mask}
     
@@ -37,58 +37,156 @@ class T5NextSentencePrediction(Dataset):
         elif unit <= current < unit*2:
             return "中盤"
         else:
-            return "後半"                
+            return "後半"
 
     def __tokenize(self, input_seq, max_len):
         return self.tokenizer(
             input_seq, max_length=max_len, truncation=True, 
             padding="max_length", return_tensors="pt"
             )
-        
-    def __set_as_line(self, file_path):
-        print("train file...", file_path)
-        with open(file_path, "r", encoding="utf-8") as f:
-            li =  f.readlines();            
-            for idx in range(len(li)-1):
-                source,target = li[idx], li[idx+1]
-                
-                tokenized_inputs = self.tokenize(source, self.input_max_len)
-                tokenized_targets = self.tokenize(target, self.target_max_len)
-                self.inputs.append(tokenized_inputs)
-                self.targets.append(tokenized_targets)
-                if len(self.inputs) >= self.max_data_size:
-                    break
 
-    def __set_as_paddinged_line(self, file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
-            li =  f.readlines();
-            title = li[0].rstrip()
-            total = len(li)                
-            for idx in range(1, len(li)-2):
-                part = self.__get_part(idx, total)
-                source = "タイトル「{}」の{}の文章を予測 : {}".format(title, part, li[idx])
-                # print(source)
-                target = li[idx+1]                
-                tokenized_inputs = self.__tokenize(source, self.input_max_len)
-                tokenized_targets = self.__tokenize(target, self.target_max_len)
-                self.inputs.append(tokenized_inputs)
-                self.targets.append(tokenized_targets)
-                if len(self.inputs) >= self.max_data_size:
-                    break
+    def __count_as_token(self, seq):
+        return len(self.tokenizer.encode(seq))
+    # def __add_prefix(self, title, current, sentense):                
+    #     # return "タイトル「{}」に続く文章: {}".format(title, sentense)
+    #     return "文章生成: {}。{}: ".format(title, current, sentense, title, current+1)
+    
+    def __add_prefix(self, title, part, sentense):
+        return "文章生成 「{}の{}」: {}".format(title, part, sentense)
 
     def _build(self):
         while True:
             idx = random.randint(0, len(self.target_files)-1)
-            f = self.target_files.pop(idx)
+            file_path = self.target_files.pop(idx)
             print('use files...', file_path)
-                    
-            self.__set_as_line(file_path)
+
+            
+            # self.__set_as_line(file_path)
             # self.__set_as_paddinged_line(file_path)
+            self.__set_as_line_end(file_path)
             
             if len(self.inputs) >= self.max_data_size:
                 break
             if len(self.target_files) == 0:
                 break
+        # print('av,', sum(self.tmp)/len(self.tmp))
+        # print('max,', max(self.tmp))
+        # print('min,', min(self.tmp))
+
+    def __set_as_line(self, file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            li =  f.readlines();
+            title = li[0].rstrip()
+            total = len(li)
+            for idx in range(1, len(li)-5):
+                source = li[idx] + li[idx+1] + li[idx+2]
+                target = li[idx+3] + li[idx+4] + li[idx+5]
+                self.tmp.append(len(source))
+                rate = int(idx/total*10)
+                source = self.__add_prefix(title, rate, source)
+                tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                tokenized_targets = self.__tokenize(target, self.target_max_len)
+                
+                self.inputs.append(tokenized_inputs)
+                self.targets.append(tokenized_targets)
+                if len(self.inputs) >= self.max_data_size:
+                    break
+                
+    def __set_as_line_end(self, file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            li =  f.readlines();
+        title = li[0]
+        total = len(li)
+        full_line = ''.join(li[1:])
+        splited = full_line.split('。')
+        while '' in splited:
+            splited.remove('')
+
+        source = ''
+        target = ''
+        merged = ''        
+        for idx in range(len(splited) - 1):
+            if splited[idx][-1] != '」':
+                splited[idx] = splited[idx]+'。'
+            merged += splited[idx]
+
+            __next = self.__count_as_token(merged + splited[idx+1])
+            if __next > self.input_max_len:
+                if source == '':
+                    source = merged
+                    merged = ''
+                if merged != '' and source != '' and target == '':
+                    target = merged
+                    merged = ''
+            
+            if source != '' and target != '':
+                # print('s ', repr(source))
+                # print('t ', repr(target))
+                # print('')
+                part = self.__get_part(idx, total)
+                source = self.__add_prefix(title, part, source)
+                
+                tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                tokenized_targets = self.__tokenize(target, self.target_max_len)
+                
+                self.inputs.append(tokenized_inputs)
+                self.targets.append(tokenized_targets)
+                source = target
+                target = ''
+            
+                if len(self.inputs) >= self.max_data_size:
+                    break
+        
+    def __set_as_paddinged_line(self, file_path):
+        __title_len = 15
+        # __source_max = self.input_max_len - __title_len
+        __target_max = self.target_max_len
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines =  f.readlines();
+            title = li[0].rstrip()
+            total = len(li)
+
+            source, target = '', ''
+            source_full, target_full = False, False
+            __source_max = self.input_max_len - len(self.__add_prefix(title, 100, ''))
+            
+            for idx in range(1, len(lines)-2):
+                if len(self.inputs) >= self.max_data_size:
+                    break                
+                    
+                l = lines[idx].strip()
+                if l.count("。") > 1:
+                    sentence = l.split("。")[:-1]
+                else:
+                    sentence = [l]
+                for s in sentence:
+                    if target_full is False:
+                        if(len(source) + len(s) < __source_max):
+                            source += s
+                        else:
+                            source_full = True
+                    if source_full:
+                        if(len(target) + len(s) < __target_max):
+                            target += s
+                        else:
+                            target_full = True
+
+                if source_full and target_full:
+                    __raw_target = target
+
+                    source = self.__add_prefix(title, source)                        
+                    # print('source:', source)
+                    # print('target:', target)
+                    # print('---------')
+                    tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                    tokenized_targets = self.__tokenize(target, self.target_max_len)
+                    self.inputs.append(tokenized_inputs)
+                    self.targets.append(tokenized_targets)
+
+                    source = __raw_target
+                    target = ''
+                    source_full, target_full = True, False
 
       
 
@@ -177,6 +275,7 @@ class GPTNextSentencePrediction(Dataset):
                 self.__set_as_paddinged_line(file_path, with_prefix)
             else:
                 self.__set_as_line(file_path, with_prefix)
+                # self.__set_as_line_end(file_path, with_prefix)
 
     def __set_as_line(self, file_path, with_prefix=False):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -184,8 +283,36 @@ class GPTNextSentencePrediction(Dataset):
             title = li[0].rstrip()
             total = len(li)
             
-            for idx in range(1, len(li)-2):
-                source,target = li[idx], li[idx+1]
+            for idx in range(1, len(li)-6):
+                source = li[idx] + li[idx+1] + li[idx+2]
+                target = li[idx+3] + li[idx+4] + li[idx+5]
+                source = source.strip()
+                target = target.strip()
+                if with_prefix:
+                    part = self.__get_part(idx, total)
+                    source = self.__append_prefix(title, part, source)
+
+                source = self.__bos + source
+                target = self.__bos + target
+                # print('source:', source)
+                # print('target:', target)
+
+                tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                tokenized_targets = self.__tokenize(target, self.target_max_len)
+                self.inputs.append(tokenized_inputs)
+                self.targets.append(tokenized_targets)
+                if len(self.inputs) >= self.max_data_size:
+                    break
+                
+    def __set_as_line_end(self, file_path, with_prefix=False):        
+        with open(file_path, "r", encoding="utf-8") as f:
+            li =  f.readlines();            
+            title = li[0].rstrip()
+            total = len(li)
+            
+            for idx in range(1, len(li)-6):
+                source = li[idx] + li[idx+1] + li[idx+2]
+                target = li[idx+3] + li[idx+4] + li[idx+5]
                 source = source.strip()
                 target = target.strip()
                 if with_prefix:

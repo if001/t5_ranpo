@@ -21,7 +21,7 @@ from itertools import chain
 import sentencepiece
 from distutils.dir_util import copy_tree
 
-from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction, GPTNextSentencePredictionFullPadding
+from dataloader import T5NextSentencePrediction, GPTNextSentencePrediction
 
 # max_seq_length = 256
 # max_dataset_length = 80000
@@ -73,12 +73,6 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             max_dataset_length      
             )
     if model_type == 'gpt':
-        # ds = GPTNextSentencePredictionFullPadding(
-        #     tokenizer,
-        #     files,
-        #     max_seq_length,
-        #     max_dataset_length
-        #     )
         ds = GPTNextSentencePrediction(
             tokenizer,
             files,
@@ -86,8 +80,8 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             max_seq_length,
             max_dataset_length
             )
-
-    # ds = apply_group(ds, max_seq_length)
+        ds = apply_group(ds, max_seq_length)
+        
     train_size = int(len(ds) * 0.95)
     val_size = len(ds) - train_size
     train_data, val_data = torch.utils.data.random_split(dataset=ds, lengths=[train_size, val_size], generator=torch.Generator().manual_seed(42))
@@ -118,8 +112,8 @@ def train(tokenizer, model, training_args, train_data, val_data, resume=False):
 
 def arg_parse():
     data_set_dir = "/content/data_set/ranpo/data_set/"
-    model_save_dir = "/content/saved_model/t5_ranpo/"
-    storage_dir = '/content/drive/MyDrive/t5_ranpo/'
+    # model_save_dir = "/content/saved_model/t5_ranpo/"
+    # storage_dir = '/content/drive/MyDrive/t5_ranpo/'
             
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', type=str, help='model name')
@@ -132,23 +126,38 @@ def arg_parse():
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
     
-
-    
     args = parser.parse_args()
     
     model_name = args.m
-    model_save_dir = args.o
-    if(os.path.exists(model_save_dir) is False):
-        print("{} not found. create...".format(model_save_dir))
-        os.makedirs(model_save_dir)
-        
+
     data_set_dir = args.d
     assert os.path.exists(data_set_dir), '{} not found'.format(data_set_dir)
     batch_size = args.batch_size
     epoch = args.epoch
-    
+
+
     # lr=1e-4
     # lr=5e-5
+
+    # lr=1e-4
+    # for t5
+    # lr=1e-4
+    # lr=3e-4
+    lr=1e-3
+    gradient_accumulation_steps=4
+    # gradient_accumulation_steps=64
+
+    _b = "batch{}-{}".format(args.batch_size, gradient_accumulation_steps)
+    _e = "epoch{}".format(epoch)
+    _s = "seqlen{}".format(args.max_seq_len)
+    _lr = "lr{}".format(lr)
+    model_save_dir = "{}_{}_{}_{}_{}_{}".format(args.o, args.type, _b, _e, _s, _lr)
+
+    if(os.path.exists(model_save_dir) is False):
+        print("{} not found. create...".format(model_save_dir))
+        os.makedirs(model_save_dir)
+
+    
     training_args = Seq2SeqTrainingArguments(
         evaluation_strategy="epoch",
         save_strategy="epoch",
@@ -157,6 +166,11 @@ def arg_parse():
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epoch,
         output_dir=model_save_dir,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        learning_rate=lr,
+        adafactor=True,
+        lr_scheduler_type='constant',
+        weight_decay=0.001
         )
 
     print("data set dir:", data_set_dir)
@@ -169,9 +183,10 @@ def arg_parse():
 def load_model(model_type, model_name):
     if model_type == "t5":
         default_model = "sonoisa/t5-base-japanese"
+        # default_model = "sonoisa/t5-base-japanese-v1.1"        
         tokenizer = T5Tokenizer.from_pretrained(default_model)
         
-        model_name =   model_name if model_name else default_model
+        model_name = model_name if model_name else default_model
         model = T5ForConditionalGeneration.from_pretrained(model_name)
         
     elif model_type == 'gpt':
@@ -192,8 +207,8 @@ def load_model(model_type, model_name):
         # model_name = model_name if model_name else default_model        
         # model = GPTNeoXForCausalLM.from_pretrained(model_name)
 
-        # default_model = "rinna/japanese-gpt2-small"
-        default_model = "rinna/japanese-gpt2-medium"
+        default_model = "rinna/japanese-gpt2-small"
+        # default_model = "rinna/japanese-gpt2-medium"
         model_name = model_name if model_name else default_model        
         tokenizer = T5Tokenizer.from_pretrained(default_model)        
         tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
@@ -216,13 +231,14 @@ def main():
 
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
 
-
-    # print(train_data[0]['input_ids'])
-    # a = tokenizer.batch_decode(train_data[0]['input_ids'])
-    # b = tokenizer.batch_decode(train_data[0]['labels'])
-    # print(a)
-    # print(b)
-    train(tokenizer, model, training_args, train_data, val_data)
+    for i in range(100):
+        a = tokenizer.batch_decode(train_data[i]['input_ids'])
+        print('source,', a)
+        # print('source,', len(a), ''.join(a))
+        b = tokenizer.batch_decode(train_data[i]['labels'])
+        # print('target,', len(b), ''.join(b))
+        print('=================')        
+    # train(tokenizer, model, training_args, train_data, val_data)
 
 if __name__ == "__main__":
     main()
