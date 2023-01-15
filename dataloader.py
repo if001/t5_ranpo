@@ -213,10 +213,10 @@ class GPTNextSentencePrediction(Dataset):
   
     def __getitem__(self, index):
         source_ids = self.inputs[index]["input_ids"].squeeze()
-        target_ids = self.targets[index]["input_ids"].squeeze()
+        #target_ids = self.targets[index]["input_ids"].squeeze()
 
         source_mask = self.inputs[index]["attention_mask"].squeeze()
-        target_mask = self.targets[index]["attention_mask"].squeeze()
+        #target_mask = self.targets[index]["attention_mask"].squeeze()
 
         # return {"source_ids": source_ids, "source_mask": source_mask, 
         #         "target_ids": target_ids, "target_mask": target_mask}
@@ -241,6 +241,9 @@ class GPTNextSentencePrediction(Dataset):
             input_seq, max_length=max_len, truncation=True,
             return_tensors="pt",
             )
+
+    def __count_as_token(self, seq):
+        return len(self.tokenizer.encode(seq))
 
     def __complement_end(self, s):
         def is_end(_s, char):
@@ -388,3 +391,50 @@ class GPTNextSentencePrediction(Dataset):
                     source_full, target_full = True, False
 
    
+    def __set_as_line_end(self, file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            li =  f.readlines();
+        title = li[0]
+        total = len(li)
+        full_line = ''.join(li[1:])
+        splited = full_line.split('。')
+        while '' in splited:
+            splited.remove('')
+
+        source = ''
+        target = ''
+        merged = ''        
+        for idx in range(len(splited) - 1):
+            if splited[idx][-1] != '」':
+                splited[idx] = splited[idx]+'。'
+            merged += splited[idx]
+
+            __next = self.__count_as_token(merged + splited[idx+1])
+            if __next > self.input_max_len:
+                if source == '':
+                    source = merged
+                    merged = ''
+                if merged != '' and source != '' and target == '':
+                    target = merged
+                    merged = ''
+            
+            if source != '' and target != '':
+                # print('s ', repr(source))
+                # print('t ', repr(target))
+                # print('')
+                part = self.__get_part(idx, total)
+                source = self.__add_prefix(title, part, source)
+
+                source = self.__bos + source
+                #target = self.__bos + target
+
+                tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                #tokenized_targets = self.__tokenize(target, self.target_max_len)
+                
+                self.inputs.append(tokenized_inputs)
+                #self.targets.append(tokenized_targets)
+                source = target
+                target = ''
+            
+                if len(self.inputs) >= self.max_data_size:
+                    break
