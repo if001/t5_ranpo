@@ -128,7 +128,7 @@ def arg_parse():
     parser.add_argument('--epoch', type=int, default=10, help="max_epoch")    
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
-    
+
     args = parser.parse_args()
     
     model_name = args.m
@@ -176,7 +176,8 @@ def arg_parse():
         lr_scheduler_type='constant',
         weight_decay=0.001,
         metric_for_best_model = 'eval_loss',
-        load_best_model_at_end = True
+        load_best_model_at_end = True,
+        save_total_limit=2
         )
 
     print("data set dir:", data_set_dir)
@@ -229,7 +230,7 @@ def load_model(model_type, model_name):
 
 def main():
     model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type = arg_parse()
-    tokenizer, model = load_model(model_type, model_name)
+    tokenizer, model = load_model(model_type, model_name, resume_model)
     
     target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(str(target_files))
