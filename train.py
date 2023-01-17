@@ -146,8 +146,8 @@ def arg_parse():
     # for t5
     # lr=1e-4
     # lr=3e-4
-    lr=1e-3
     lr=5e-3
+ 
     gradient_accumulation_steps=4
     # gradient_accumulation_steps=64
 
@@ -174,7 +174,7 @@ def arg_parse():
         learning_rate=lr,
         adafactor=True,
         lr_scheduler_type='constant',
-        weight_decay=0.001,
+        weight_decay=0.1,
         metric_for_best_model = 'eval_loss',
         load_best_model_at_end = True,
         save_total_limit=2
@@ -214,8 +214,8 @@ def load_model(model_type, model_name):
         # model_name = model_name if model_name else default_model        
         # model = GPTNeoXForCausalLM.from_pretrained(model_name)
 
-        default_model = "rinna/japanese-gpt2-small"
-        # default_model = "rinna/japanese-gpt2-medium"
+        # default_model = "rinna/japanese-gpt2-small"
+        default_model = "rinna/japanese-gpt2-medium"
         model_name = model_name if model_name else default_model        
         tokenizer = T5Tokenizer.from_pretrained(default_model)        
         tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
