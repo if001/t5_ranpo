@@ -148,7 +148,7 @@ def arg_parse():
     # lr=3e-4
     lr=5e-3
  
-    gradient_accumulation_steps=4
+    gradient_accumulation_steps=32
     # gradient_accumulation_steps=64
 
     _b = "batch{}-{}".format(args.batch_size, gradient_accumulation_steps)
