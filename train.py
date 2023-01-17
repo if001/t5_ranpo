@@ -230,7 +230,7 @@ def load_model(model_type, model_name):
 
 def main():
     model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type = arg_parse()
-    tokenizer, model = load_model(model_type, model_name, resume_model)
+    tokenizer, model = load_model(model_type, model_name)
     
     target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(str(target_files))
