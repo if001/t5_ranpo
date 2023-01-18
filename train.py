@@ -147,6 +147,7 @@ def arg_parse():
     # lr=1e-4
     # lr=3e-4
     lr=1e-3
+    lr=5e-3
     gradient_accumulation_steps=4
     # gradient_accumulation_steps=64
 
