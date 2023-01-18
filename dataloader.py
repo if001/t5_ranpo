@@ -52,7 +52,7 @@ class T5NextSentencePrediction(Dataset):
     #     return "文章生成: {}。{}: ".format(title, current, sentense, title, current+1)
     
     def __add_prefix(self, title, part, sentense):
-        return "文章生成 「{}の{}」: {}".format(title, part, sentense)
+        return "文章生成 「{}」の{}: {}".format(title, part, sentense)
 
     def _build(self):
         while True:
