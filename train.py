@@ -211,8 +211,8 @@ def load_model(model_type, model_name):
         # model_name = model_name if model_name else default_model        
         # model = GPTNeoXForCausalLM.from_pretrained(model_name)
 
-        default_model = "rinna/japanese-gpt2-small"
-        # default_model = "rinna/japanese-gpt2-medium"
+        # default_model = "rinna/japanese-gpt2-small"
+        default_model = "rinna/japanese-gpt2-medium"
         model_name = model_name if model_name else default_model        
         tokenizer = T5Tokenizer.from_pretrained(default_model)        
         tokenizer.do_lower_case = True  # due to some bug of tokenizer config loading
