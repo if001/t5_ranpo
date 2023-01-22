@@ -257,7 +257,8 @@ class GPTNextSentencePrediction(Dataset):
                     
     def _build(self):
         # self.__build_sentense(with_prefix=True, padding_line=True)
-        self.__build_sentense(with_prefix=True, padding_line=False)
+        # self.__build_sentense(with_prefix=True, padding_line=False)
+        self.__build_sentense(with_prefix=False, padding_line=False)
         random.shuffle(self.inputs)
 
     def __build_sentense(self, with_prefix = False, padding_line = False):
@@ -372,16 +373,16 @@ class GPTNextSentencePrediction(Dataset):
                         page = "{}/{}".format(idx, total)                    
                         source = self.__append_prefix(title, page, source)
                     source = self.__append_bos_eos(source)
-                    target = self.__append_bos_eos(target)
+                    # target = self.__append_bos_eos(target)
 
                     # print('source:', source)
                     # print('target:', target)
                     # print('---------')
                         
                     tokenized_inputs = self.__tokenize(source, self.input_max_len)
-                    tokenized_targets = self.__tokenize(target, self.target_max_len)
+                    #tokenized_targets = self.__tokenize(target, self.target_max_len)
                     self.inputs.append(tokenized_inputs)
-                    self.targets.append(tokenized_targets)
+                    #self.targets.append(tokenized_targets)
 
                     source = __raw_target
                     target = ''
