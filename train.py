@@ -129,7 +129,7 @@ def arg_parse():
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
-    parser.add_argument('--check_train_data', action='store_false')
+    parser.add_argument('--check_train_data', action='store_true')
 
     args = parser.parse_args()
     
