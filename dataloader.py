@@ -224,14 +224,17 @@ class GPTNextSentencePrediction(Dataset):
     def __tokenize(self, input_seq, max_len):
         return self.tokenizer(
             input_seq, max_length=max_len, truncation=True,
-            return_tensors="pt",
+            return_tensors="pt"
             )
                     
     def _build(self):
         # self.__build_sentense(with_prefix=True, padding_line=True)
         # self.__build_sentense(with_prefix=True, padding_line=False)
-        self.__build_sentense(padding_line=False)
-        random.shuffle(self.inputs)
+
+        # self.__build_sentense(padding_line=False)
+        # random.shuffle(self.inputs)
+        self.__set_as_file(self.inputs)
+
 
     def __build_sentense(self, padding_line = False):
         while True:
@@ -316,4 +319,13 @@ class GPTNextSentencePrediction(Dataset):
                     target = ''
                     source_full, target_full = True, False
 
-   
+    ## ファイルの先頭から終わりまでを<s></s>でくくる. train.pyのapply_groupでmax_lenごとのサイズになるはず
+    def __set_as_file(self):
+        for file_path in self.target_files:
+            with open(file_path, "r", encoding="utf-8") as f:
+                li =  f.readlines();
+            source = ''.join(li)
+            source = self.__bos + source + self.__eos
+            tokenized_inputs = self.tokenizer(input_seq, return_tensors="pt", add_special_tokens=False)
+            self.inputs.append(tokenized_inputs)
+        
