@@ -255,9 +255,12 @@ class GPTNextSentencePrediction(Dataset):
             
             for idx in range(1, len(li)):
                 source = li[idx]
+                if source == '':
+                    source = '\n'
                 # source = source.strip()
 
                 source = self.__bos + source
+                source = source + '\n'
                 # print('source:', source)
 
                 tokenized_inputs = self.__tokenize(source, self.input_max_len)
