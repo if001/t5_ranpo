@@ -255,7 +255,7 @@ class GPTNextSentencePrediction(Dataset):
             
             for idx in range(1, len(li)):
                 source = li[idx]
-                source = source.strip()
+                # source = source.strip()
 
                 source = self.__bos + source
                 # print('source:', source)
