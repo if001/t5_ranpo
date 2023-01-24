@@ -129,6 +129,7 @@ def arg_parse():
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+    parser.add_argument('--grad_ac', type=int, default=2, help='gradient_accumulate_steps')
     parser.add_argument('--check_train_data', action='store_true')
 
     args = parser.parse_args()
@@ -146,10 +147,10 @@ def arg_parse():
     # gpt
     # lr=5e-3
     lr = args.learning_rate
-    gradient_accumulation_steps=4
-    # gradient_accumulation_steps=64
+    # gradient_accumulation_steps=4
+    grad_ac = args.grad_ac
 
-    _b = "batch{}-{}".format(args.batch_size, gradient_accumulation_steps)
+    _b = "batch{}-{}".format(args.batch_size, grad_ac)
     _e = "epoch{}".format(epoch)
     _s = "seqlen{}".format(args.max_seq_len)
     _lr = "lr{}".format(lr)
@@ -168,7 +169,7 @@ def arg_parse():
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epoch,
         output_dir=model_save_dir,
-        gradient_accumulation_steps=gradient_accumulation_steps,
+        gradient_accumulation_steps=grad_ac,
         learning_rate=lr,
         adafactor=True,
         lr_scheduler_type='constant',
@@ -227,6 +228,8 @@ def load_model(model_type, model_name):
 
 def main():
     model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type, check_train_data = arg_parse()
+
+
     tokenizer, model = load_model(model_type, model_name)
     
     target_files = pathlib.Path(data_set_dir) / "*.txt"
