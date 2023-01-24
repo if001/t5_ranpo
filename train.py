@@ -175,7 +175,8 @@ def arg_parse():
         lr_scheduler_type='constant',
         weight_decay=0.001,
         metric_for_best_model = 'eval_loss',
-        load_best_model_at_end = True
+        load_best_model_at_end = True,
+        save_total_limit=1
         )
 
     print("data set dir:", data_set_dir)
