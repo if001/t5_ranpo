@@ -233,7 +233,7 @@ class GPTNextSentencePrediction(Dataset):
 
         # self.__build_sentense(padding_line=False)
         # random.shuffle(self.inputs)
-        self.__set_as_file(self.inputs)
+        self.__set_as_file()
 
 
     def __build_sentense(self, padding_line = False):
