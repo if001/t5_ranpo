@@ -326,6 +326,6 @@ class GPTNextSentencePrediction(Dataset):
                 li =  f.readlines();
             source = ''.join(li)
             source = self.__bos + source + self.__eos
-            tokenized_inputs = self.tokenizer(input_seq, return_tensors="pt", add_special_tokens=False)
+            tokenized_inputs = self.tokenizer(source, return_tensors="pt", add_special_tokens=False)
             self.inputs.append(tokenized_inputs)
         
