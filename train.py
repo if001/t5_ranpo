@@ -236,12 +236,12 @@ def main():
     train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
 
     if check_train_data:
-        print('check train dat')
+        print('check train data')
         for i in range(10):
             a = tokenizer.batch_decode(train_data[i]['input_ids'])
             print('source,', a)
             # print('source,', len(a), ''.join(a))
-            b = tokenizer.batch_decode(train_data[i]['labels'])
+            # b = tokenizer.batch_decode(train_data[i]['labels'])
             # print('target,', len(b), ''.join(b))
             print('=================')
         return 
