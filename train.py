@@ -65,7 +65,7 @@ def apply_group(ds, block_size = 256):
 
     return results
 
-def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type):
+def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type, per_file):
     if model_type == 't5':
         ds = T5NextSentencePrediction(
             tokenizer,
@@ -80,7 +80,8 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             files,
             max_seq_length,
             max_seq_length,
-            max_dataset_length
+            max_dataset_length,
+            per_file
             )
         ds = apply_group(ds, max_seq_length)
         
@@ -131,6 +132,7 @@ def arg_parse():
     parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
     parser.add_argument('--grad_ac', type=int, default=2, help='gradient_accumulate_steps')
     parser.add_argument('--check_train_data', action='store_true')
+    parser.add_argument('--per_file', action='store_true')
 
     args = parser.parse_args()
     
@@ -151,10 +153,9 @@ def arg_parse():
     grad_ac = args.grad_ac
 
     _b = "batch{}-{}".format(args.batch_size, grad_ac)
-    _e = "epoch{}".format(epoch)
     _s = "seqlen{}".format(args.max_seq_len)
     _lr = "lr{}".format(lr)
-    model_save_dir = "{}_{}_{}_{}_{}_{}".format(args.o, args.type, _b, _e, _s, _lr)
+    model_save_dir = "{}_{}_{}_{}_{}".format(args.o, args.type, _b, _s, _lr)
 
     if(os.path.exists(model_save_dir) is False):
         print("{} not found. create...".format(model_save_dir))
@@ -184,7 +185,7 @@ def arg_parse():
     print("max_seq_len:", args.max_seq_len)
     print("max_data_len:", args.max_data_len)
 
-    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len, args.type, args.check_train_data
+    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len, args.type, args.check_train_data, args.per_file
 
 def load_model(model_type, model_name):
     if model_type == "t5":
@@ -228,8 +229,7 @@ def load_model(model_type, model_name):
     return tokenizer, model
 
 def main():
-    model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type, check_train_data = arg_parse()
-
+    model_name, data_set_dir, train_args, max_seq_len, max_dataset_len, model_type, check_train_data, per_file = arg_parse()
 
     tokenizer, model = load_model(model_type, model_name)
     
@@ -237,7 +237,7 @@ def main():
     files = glob.glob(str(target_files))
 
 
-    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
+    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_len, max_dataset_len, model_type, per_file)
 
     if check_train_data:
         print('check train data')
@@ -250,7 +250,7 @@ def main():
             print('=================')
         return 
 
-    train(tokenizer, model, training_args, train_data, val_data)
+    train(tokenizer, model, train_args, train_data, val_data)
 
 if __name__ == "__main__":
     main()

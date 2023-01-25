@@ -193,7 +193,7 @@ class T5NextSentencePrediction(Dataset):
 
 
 class GPTNextSentencePrediction(Dataset):
-    def __init__(self, tokenizer, target_files, input_max_len=512, target_max_len=512, max_data_size=100):
+    def __init__(self, tokenizer, target_files, input_max_len=512, target_max_len=512, max_data_size=100, per_file = False):
         self.target_files = target_files
         self.input_max_len = input_max_len
         self.target_max_len = target_max_len
@@ -202,6 +202,7 @@ class GPTNextSentencePrediction(Dataset):
         self.targets = []
 
         self.max_data_size = max_data_size
+        self.__per_file = per_file
 
         self.__bos = tokenizer.special_tokens_map['bos_token']
         self.__eos = tokenizer.special_tokens_map['eos_token']
@@ -228,15 +229,15 @@ class GPTNextSentencePrediction(Dataset):
             )
                     
     def _build(self):
-        # self.__build_sentense(with_prefix=True, padding_line=True)
-        # self.__build_sentense(with_prefix=True, padding_line=False)
-
-        # self.__build_sentense(padding_line=False)
+        if self.__per_file:
+            print('per file dataset')
+            self.__set_as_file()
+        else:
+            print('multi line dataset')
+            self.__build_sentense()
         # random.shuffle(self.inputs)
-        self.__set_as_file()
 
-
-    def __build_sentense(self, padding_line = False):
+    def __build_sentense(self):
         while True:
             if len(self.target_files) == 0:
                 break
@@ -246,30 +247,28 @@ class GPTNextSentencePrediction(Dataset):
             idx = random.randint(0, len(self.target_files)-1)
             file_path = self.target_files.pop(idx)
             print('use file...', file_path)
-
-            if padding_line:
-                self.__set_as_paddinged_line(file_path)
-            else:
-                self.__set_as_line(file_path)
+            self.__set_as_line(file_path)
+            # self.__set_as_paddinged_line(file_path)
 
     def __set_as_line(self, file_path):
         with open(file_path, "r", encoding="utf-8") as f:
-            li =  f.readlines();
+            li =  f.readlines()
             
             for idx in range(1, len(li)):
-                source = li[idx]
-                if source == '':
-                    source = '\n'
+                source = li[idx] + li[idx+1] + li[idx+2]
                 # source = source.strip()
 
-                source = self.__bos + source
-                source = source + '\n'
-                # print('source:', source)
+                source = self.__bos + source + self.__eos
 
-                tokenized_inputs = self.__tokenize(source, self.input_max_len)
+                tokenized_inputs = self.tokenizer(source, return_tensors="pt", add_special_tokens=False)
                 self.inputs.append(tokenized_inputs)
                 if len(self.inputs) >= self.max_data_size:
                     break
+
+    def __complement_end(self, s):
+        if s.count("。") == 0:
+            return s + '。'
+        return s
 
     def __set_as_paddinged_line(self, file_path):
         __source_max = self.input_max_len
@@ -282,8 +281,8 @@ class GPTNextSentencePrediction(Dataset):
                     
             for idx in range(1, len(li)-2):
                 if len(self.inputs) >= self.max_data_size:
-                    break                
-                    
+                    break               
+
                 l = li[idx].strip()
                 if l.count("。") > 1:
                     sentence = l.split("。")[:-1]
@@ -291,12 +290,12 @@ class GPTNextSentencePrediction(Dataset):
                     sentence = [l]
                 for s in sentence:
                     if target_full is False:
-                        if(len(source) + len(s) < __source_max):
+                        if(len(source) + len(s) < self.input_max_len):
                             source += self.__complement_end(s)
                         else:
                             source_full = True                
                     if source_full:
-                        if(len(target) + len(s) < __target_max):
+                        if(len(target) + len(s) < self.input_max_len):
                             target += self.__complement_end(s)
                         else:
                             target_full = True
@@ -319,7 +318,7 @@ class GPTNextSentencePrediction(Dataset):
                     target = ''
                     source_full, target_full = True, False
 
-    ## ファイルの先頭から終わりまでを<s></s>でくくる. train.pyのapply_groupでmax_lenごとのサイズになるはず
+    ## ファイルの先頭から終わりまでを<s></s>でくくる. 
     def __set_as_file(self):
         for file_path in self.target_files:
             with open(file_path, "r", encoding="utf-8") as f:
