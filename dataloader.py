@@ -254,7 +254,7 @@ class GPTNextSentencePrediction(Dataset):
         with open(file_path, "r", encoding="utf-8") as f:
             li =  f.readlines()
             
-            for idx in range(1, len(li)):
+            for idx in range(1, len(li)-3):
                 source = li[idx] + li[idx+1] + li[idx+2]
                 # source = source.strip()
 
