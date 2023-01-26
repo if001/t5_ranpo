@@ -65,7 +65,7 @@ def apply_group(ds, block_size = 256):
 
     return results
 
-def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type):
+def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type, per_file):
     if model_type == 't5':
         ds = T5NextSentencePrediction(
             tokenizer,
@@ -80,7 +80,8 @@ def prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model
             files,
             max_seq_length,
             max_seq_length,
-            max_dataset_length
+            max_dataset_length,
+            per_file
             )
         ds = apply_group(ds, max_seq_length)
         
@@ -128,6 +129,10 @@ def arg_parse():
     parser.add_argument('--epoch', type=int, default=10, help="max_epoch")    
     parser.add_argument('--max_seq_len', type=int, default=256, help="max_seq_length")
     parser.add_argument('--max_data_len', type=int, default=200, help="max_seq_length")
+    parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+    parser.add_argument('--grad_ac', type=int, default=2, help='gradient_accumulate_steps')
+    parser.add_argument('--check_train_data', action='store_true')
+    parser.add_argument('--per_file', action='store_true')
 
     args = parser.parse_args()
     
@@ -138,24 +143,19 @@ def arg_parse():
     batch_size = args.batch_size
     epoch = args.epoch
 
-
-    # lr=1e-4
-    # lr=5e-5
-
-    # lr=1e-4
     # for t5
     # lr=1e-4
     # lr=3e-4
-    lr=5e-3
- 
-    gradient_accumulation_steps=32
-    # gradient_accumulation_steps=64
+    # gpt
+    # lr=5e-3
+    lr = args.learning_rate
+    # gradient_accumulation_steps=4
+    grad_ac = args.grad_ac
 
-    _b = "batch{}-{}".format(args.batch_size, gradient_accumulation_steps)
-    _e = "epoch{}".format(epoch)
+    _b = "batch{}-{}".format(args.batch_size, grad_ac)
     _s = "seqlen{}".format(args.max_seq_len)
     _lr = "lr{}".format(lr)
-    model_save_dir = "{}_{}_{}_{}_{}_{}".format(args.o, args.type, _b, _e, _s, _lr)
+    model_save_dir = "{}_{}_{}_{}_{}".format(args.o, args.type, _b, _s, _lr)
 
     if(os.path.exists(model_save_dir) is False):
         print("{} not found. create...".format(model_save_dir))
@@ -170,14 +170,14 @@ def arg_parse():
         per_device_eval_batch_size=batch_size,
         num_train_epochs=epoch,
         output_dir=model_save_dir,
-        gradient_accumulation_steps=gradient_accumulation_steps,
+        gradient_accumulation_steps=grad_ac,
         learning_rate=lr,
         adafactor=True,
         lr_scheduler_type='constant',
         weight_decay=0.1,
         metric_for_best_model = 'eval_loss',
         load_best_model_at_end = True,
-        save_total_limit=2
+        save_total_limit=1
         )
 
     print("data set dir:", data_set_dir)
@@ -185,7 +185,7 @@ def arg_parse():
     print("max_seq_len:", args.max_seq_len)
     print("max_data_len:", args.max_data_len)
 
-    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len, args.type
+    return model_name, data_set_dir, training_args, args.max_seq_len, args.max_data_len, args.type, args.check_train_data, args.per_file
 
 def load_model(model_type, model_name):
     if model_type == "t5":
@@ -229,23 +229,28 @@ def load_model(model_type, model_name):
     return tokenizer, model
 
 def main():
-    model_name, data_set_dir, training_args, max_seq_length, max_dataset_length, model_type = arg_parse()
+    model_name, data_set_dir, train_args, max_seq_len, max_dataset_len, model_type, check_train_data, per_file = arg_parse()
+
     tokenizer, model = load_model(model_type, model_name)
     
     target_files = pathlib.Path(data_set_dir) / "*.txt"
     files = glob.glob(str(target_files))
 
 
-    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_length, max_dataset_length, model_type)
+    train_data, val_data = prepare_data_set(tokenizer, files, max_seq_len, max_dataset_len, model_type, per_file)
 
-    # for i in range(100):
-    #     a = tokenizer.batch_decode(train_data[i]['input_ids'])
-    #     print('source,', a)
-    #     # print('source,', len(a), ''.join(a))
-    #     b = tokenizer.batch_decode(train_data[i]['labels'])
-    #     # print('target,', len(b), ''.join(b))
-    #     print('=================')        
-    train(tokenizer, model, training_args, train_data, val_data)
+    if check_train_data:
+        print('check train data')
+        for i in range(10):
+            a = tokenizer.batch_decode(train_data[i]['input_ids'])
+            print('source,', a)
+            # print('source,', len(a), ''.join(a))
+            # b = tokenizer.batch_decode(train_data[i]['labels'])
+            # print('target,', len(b), ''.join(b))
+            print('=================')
+        return 
+
+    train(tokenizer, model, train_args, train_data, val_data)
 
 if __name__ == "__main__":
     main()
